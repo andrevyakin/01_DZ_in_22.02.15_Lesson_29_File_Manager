@@ -47,6 +47,84 @@ void GetDir(_finddata_t* dir, int count)
 	_findclose(firstID);
 }
 
+// онсольные цвета
+enum
+{
+	clBlack = 0, clNavy = 1, clGreen = 2, clTeal = 3, clBrown = 4,
+	clPurple = 5, clOlive = 6, clGray = 7, clSilver = 8, clBlue = 9,
+	clLime = 10, clCyan = 11, clRed = 12, clMagneta = 13, clYellow = 14,
+	clWhite = 15
+};
+
+void SetConsoleColorTextBackground(unsigned short Tex = clWhite, unsigned short Bg = clBlack)
+{
+	HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+	Bg = Bg << 4 | Tex;
+	SetConsoleTextAttribute(hConsole, Bg);
+}
+
+//позиционирование курсора
+void SetConsoleCursorPosition(short x_position, short y_position)
+{
+	HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+	COORD _coordPosition = { x_position, y_position };
+	SetConsoleCursorPosition(hConsole, _coordPosition);
+}
+
+//ќпределение клавиш клавиатуры
+enum VKey
+{
+	UP = 72, LEFT = 75, RIGHT = 77, DOWN = 80,
+	ENTER = 13, ESC = 27, BackSpase = 8,
+	F1 = 59, F2 = 60, PageUp = 73, PageDown = 81
+};
+
+//ƒвижение стрелками
+int Motion(_finddata_t* dir, int count)
+{
+	int y = 0, move = 0;
+
+	SetConsoleCursorPosition(0, 0);
+	SetConsoleColorTextBackground(clWhite, clGreen);
+	//ѕодсвечиваю самую верхнюю позицию
+	cout << dir[0].name;
+
+	while (move != ENTER && move != ESC && move != BackSpase)
+	{
+		//считываю нажатые клавиши
+		move = _getch();
+		if (move == 0xe0 || !move)
+			move = _getch();
+
+		//исключаю все клавиши, кроме разрешенных
+		if (move != UP && move != DOWN && move != ENTER && move != ESC && move != BackSpase)
+			move = 0;
+
+		if (move)
+		{
+			SetConsoleCursorPosition(0, y);
+			SetConsoleColorTextBackground(clGray, clBlack);
+			//здесь был курсор
+			cout << dir[y].name;
+
+			if (move == UP && y > 0)
+				y--;
+			if (move == DOWN && y < count - 1)
+				y++;
+
+			SetConsoleCursorPosition(0, y);
+			SetConsoleColorTextBackground(clWhite, clGreen);
+			//здесь курсор сейчас
+			cout << dir[y].name;
+
+			//и вернутьс€ оп€ть к серо-черному
+			SetConsoleColorTextBackground(clGray, clBlack);
+		}
+	}
+	SetConsoleCursorPosition(0, count);
+	return y;
+}
+
 void main()
 {
 	SetConsoleOutputCP(1251);
@@ -61,6 +139,8 @@ void main()
 	// ƒл€ самопроверки
 	for (int i = 0; i < count; i++)
 		cout << dir[i].name << endl;
+
+	Motion(dir, count);
 
 	delete[]dir;
 }
