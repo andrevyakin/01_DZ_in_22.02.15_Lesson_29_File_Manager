@@ -18,7 +18,7 @@ int GetCount(char* path)
 {
 	int count = 1;
 	_finddata_t temp;
-	
+
 	//Получить сведения о первом экземпляре
 	int firstID = _findfirst(path, &temp);
 
@@ -113,11 +113,12 @@ int Motion(_finddata_t* dir, int count)
 			//и вернуться опять к серо-черному
 			SetConsoleColorTextBackground(clGray, clBlack);
 		}
-		
+
+		if (move == ESC)
+			y = -1;
+
 	}
 	SetConsoleCursorPosition(0, count);
-	if (move == ESC)
-		exit(1);
 	return y;
 }
 
@@ -125,15 +126,17 @@ void main()
 {
 	SetConsoleOutputCP(1251);
 	SetConsoleCP(1251);
-	int exit = 0;
+	int move = 0;
 	char path[MAX_PATH];
 	char temp[MAX_PATH];
+
 	GetCurrentDirectory(sizeof(path), path);
-	strcat_s(path, "\\*.*");
 
 	do
 	{
-		
+		//Добавляю маску к пути
+		strcat_s(path, "\\*.*");
+
 		//Узнать количество элементов в директории
 		int count = GetCount(path);
 		//Создать массив элементов структуры _finddata_t для хранения данных текущей дирректории
@@ -144,28 +147,33 @@ void main()
 		for (int i = 0; i < count; i++)
 			cout << dir[i].name << endl;
 
-		int move = Motion(dir, count);
-		
-		delete[]dir;
-				
-		if (move == 0 || move == 1)
+		move = Motion(dir, count);
+
+		//убрать маску (4-ре последних символа)
+		strncpy_s(path, strlen(path) - 3, path, strlen(path) - 4);
+
+		// Переход в родительский каталог
+		if (move == 0 && dir[move].attrib & _A_SUBDIR || move == 1 && dir[move].attrib & _A_SUBDIR)
 		{
-			char *result = strrchr(path, '\\');
-			if (result)
+			//Найти адрес последнего слэша
+			char *end = strrchr(path, '\\');
+			if (end) //если нашел слэш
 			{
-				for (int i = 0; i < 2; i++)
-				{
-				result = strrchr(path, '\\');
-				int delta = result - path;
-				strncpy_s(temp, delta + 1, path, delta);
-				temp[delta] = '\0';
-				strcpy_s(path, temp);
-				}
-				strcat_s(path, "\\*.*");
+				//Узнать сколько лишних символов			
+				int delta = end - path;
+				//Убрать лишние символы
+				strncpy_s(path, delta + 1, path, delta);
 			}
-						
 		}
-				
+
+		// Переход в выбранный каталог
+		if (move != 0 && dir[move].attrib & _A_SUBDIR && move != 1 && dir[move].attrib & _A_SUBDIR)
+		{
+			strcat_s(path, "\\");
+			strcat_s(path, dir[move].name);
+		}
+
+		delete[]dir;
 		system("cls");
-	} while (1>0);
+	} while (move != -1);
 }
