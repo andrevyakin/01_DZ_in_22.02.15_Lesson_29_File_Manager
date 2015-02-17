@@ -13,39 +13,52 @@
 #include <conio.h>		//для _getch()
 using namespace std;
 
+//Получить количество элементов в директории
+int GetCount()
+{
+	int count = 1;
+	_finddata_t temp;
+	//Получить путь к текущей дирректории
+	char path[MAX_PATH];
+	GetCurrentDirectory(sizeof(path), path);
+	strcat_s(path, "\\*.*");
+	//Получить и сохранить сведения о первом экземпляре
+	int firstID = _findfirst(path, &temp);
+
+	while (_findnext(firstID, &temp) != -1)
+		++count;
+	_findclose(firstID);
+	return count;
+}
+
+//Получить данные текущей директории
+void GetDir(_finddata_t* dir, int count)
+{
+	//Получить путь к текущей дирректории
+	char path[MAX_PATH];
+	GetCurrentDirectory(sizeof(path), path);
+	strcat_s(path, "\\*.*");
+	//Получить и сохранить сведения о первом экземпляре
+	int firstID = _findfirst(path, &dir[0]);
+	// Поиск и сохранение в массив
+
+	for (int i = 1; i < count; i++)
+		_findnext(firstID, &dir[i]);
+	_findclose(firstID);
+}
+
 void main()
 {
 	SetConsoleOutputCP(1251);
 	SetConsoleCP(1251);
-	
+
+	//Узнать количество элементов в директории
+	int count = GetCount();
 	//Создать массив элементов структуры _finddata_t для хранения данных текущей дирректории
-	_finddata_t* dir = new _finddata_t[2];
-	_finddata_t* temp;
-	int count = 0;
+	_finddata_t* dir = new _finddata_t[count];
+	GetDir(dir, count);
 
-	//Получить путь к текущей дирректории
-	char path [MAX_PATH];
-	GetCurrentDirectory(sizeof(path), path);
-	strcat_s(path, "\\*.*");
-	
-	//Получить и сохранить сведения о первом экземпляре
-	int firstID = _findfirst(path, &dir[0]);
-
-	// Поиск и сохранение в массив
-	while (_findnext(firstID, &dir[++count]) != -1)
-	{
-		temp = new _finddata_t[count + 1];			//Выделяю нужную память под временныый массив
-		for (int i = 0; i < count + 1; i++)
-			temp[i] = dir[i];						//Копирую основной массив во временный
-		delete[] dir;								//Удаляю основной массив
-		dir = new _finddata_t[count + 2];			//Выделяю нужную память под основной массив
-		for (int i = 0; i < count +1 ; i++)
-			dir[i] = temp[i];						//Копирую элементы
-		delete[]temp;								//Удаляю уже не нужный временный массив
-	}
-	_findclose(firstID);
-	
-	//Для самопроверки
+	// Для самопроверки
 	for (int i = 0; i < count; i++)
 		cout << dir[i].name << endl;
 
