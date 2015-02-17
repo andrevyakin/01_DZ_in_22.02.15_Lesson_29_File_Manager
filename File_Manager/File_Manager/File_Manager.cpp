@@ -11,6 +11,7 @@
 #include <Windows.h>	//для корректного получения и вывода русского языка (SetConsoleOutputCP() и SetConsoleCP()), а также изменения цвета в консоле
 #include <io.h>			//для поиска файлов
 #include <conio.h>		//для _getch()
+#include <ctime>
 using namespace std;
 
 //Получить количество элементов в директории
@@ -56,7 +57,7 @@ void SetConsoleColorTextBackground(unsigned short Tex = clWhite, unsigned short 
 	SetConsoleTextAttribute(hConsole, Bg);
 }
 
-//позиционирование курсора
+//Позиционирование курсора
 void SetConsoleCursorPosition(short x_position, short y_position)
 {
 	HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -76,6 +77,11 @@ enum VKey
 int Motion(_finddata_t* dir, int count)
 {
 	int y = 0, move = 0;
+	
+	system("cls");
+	//Вывод в консоль
+	for (int i = 0; i < count; i++)
+		cout << dir[i].name << endl;
 
 	SetConsoleCursorPosition(0, 0);
 	SetConsoleColorTextBackground(clWhite, clGreen);
@@ -128,8 +134,7 @@ void main()
 	SetConsoleCP(1251);
 	int move = 0;
 	char path[MAX_PATH];
-	char temp[MAX_PATH];
-
+	
 	GetCurrentDirectory(sizeof(path), path);
 
 	do
@@ -139,21 +144,21 @@ void main()
 
 		//Узнать количество элементов в директории
 		int count = GetCount(path);
+
 		//Создать массив элементов структуры _finddata_t для хранения данных текущей дирректории
 		_finddata_t* dir = new _finddata_t[count];
+		
+		//Заполнить массив данными текущей директории
 		GetDir(dir, count, path);
-
-		// Для самопроверки
-		for (int i = 0; i < count; i++)
-			cout << dir[i].name << endl;
-
+		
+		//Передаю управление юзеру и узнаю что он хочет
 		move = Motion(dir, count);
 
 		//убрать маску (4-ре последних символа)
 		strncpy_s(path, strlen(path) - 3, path, strlen(path) - 4);
 
 		// Переход в родительский каталог
-		if (move == 0 && dir[move].attrib & _A_SUBDIR || move == 1 && dir[move].attrib & _A_SUBDIR)
+		if (move == 0 || move == 1)
 		{
 			//Найти адрес последнего слэша
 			char *end = strrchr(path, '\\');
@@ -167,13 +172,30 @@ void main()
 		}
 
 		// Переход в выбранный каталог
-		if (move != 0 && dir[move].attrib & _A_SUBDIR && move != 1 && dir[move].attrib & _A_SUBDIR)
+		if ((dir[move].attrib & _A_SUBDIR) && move != - 1 && move > 1)
 		{
 			strcat_s(path, "\\");
 			strcat_s(path, dir[move].name);
 		}
 
+		//Если файл - вывести атрибуты
+		if (!(dir[move].attrib & _A_SUBDIR) && move != -1)
+		{
+			cout << endl;
+			cout << "RDO | HID | SYS | ARC |           DATE           | SIZE" << endl;
+			cout << "--- + --- + --- + --- +--------------------------+ ----" << endl;
+				
+					char buffer[30];
+					cout << ((dir[move].attrib & _A_RDONLY) ? " Y  " : " N  ") << "|";
+					cout << " " << ((dir[move].attrib & _A_HIDDEN) ? " Y  " : " N  ") << "|";
+					cout << " " << ((dir[move].attrib & _A_SYSTEM) ? " Y  " : " N  ") << "|";
+					cout << " " << ((dir[move].attrib & _A_ARCH) ? " Y  " : " N  ") << "|";
+					ctime_s(buffer, _countof(buffer), & dir[move].time_write);
+					strncpy_s(buffer, 25, buffer, 24);
+					cout << " " << buffer << " | " << dir[move].size << endl << endl;
+					system("pause");
+		}
+
 		delete[]dir;
-		system("cls");
 	} while (move != -1);
 }
