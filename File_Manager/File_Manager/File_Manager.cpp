@@ -14,15 +14,12 @@
 using namespace std;
 
 //Получить количество элементов в директории
-int GetCount()
+int GetCount(char* path)
 {
 	int count = 1;
 	_finddata_t temp;
-	//Получить путь к текущей дирректории
-	char path[MAX_PATH];
-	GetCurrentDirectory(sizeof(path), path);
-	strcat_s(path, "\\*.*");
-	//Получить и сохранить сведения о первом экземпляре
+	
+	//Получить сведения о первом экземпляре
 	int firstID = _findfirst(path, &temp);
 
 	while (_findnext(firstID, &temp) != -1)
@@ -32,12 +29,8 @@ int GetCount()
 }
 
 //Получить данные текущей директории
-void GetDir(_finddata_t* dir, int count)
+void GetDir(_finddata_t* dir, int count, char* path)
 {
-	//Получить путь к текущей дирректории
-	char path[MAX_PATH];
-	GetCurrentDirectory(sizeof(path), path);
-	strcat_s(path, "\\*.*");
 	//Получить и сохранить сведения о первом экземпляре
 	int firstID = _findfirst(path, &dir[0]);
 	// Поиск и сохранение в массив
@@ -120,8 +113,11 @@ int Motion(_finddata_t* dir, int count)
 			//и вернуться опять к серо-черному
 			SetConsoleColorTextBackground(clGray, clBlack);
 		}
+		
 	}
 	SetConsoleCursorPosition(0, count);
+	if (move == ESC)
+		exit(1);
 	return y;
 }
 
@@ -129,18 +125,47 @@ void main()
 {
 	SetConsoleOutputCP(1251);
 	SetConsoleCP(1251);
+	int exit = 0;
+	char path[MAX_PATH];
+	char temp[MAX_PATH];
+	GetCurrentDirectory(sizeof(path), path);
+	strcat_s(path, "\\*.*");
 
-	//Узнать количество элементов в директории
-	int count = GetCount();
-	//Создать массив элементов структуры _finddata_t для хранения данных текущей дирректории
-	_finddata_t* dir = new _finddata_t[count];
-	GetDir(dir, count);
+	do
+	{
+		
+		//Узнать количество элементов в директории
+		int count = GetCount(path);
+		//Создать массив элементов структуры _finddata_t для хранения данных текущей дирректории
+		_finddata_t* dir = new _finddata_t[count];
+		GetDir(dir, count, path);
 
-	// Для самопроверки
-	for (int i = 0; i < count; i++)
-		cout << dir[i].name << endl;
+		// Для самопроверки
+		for (int i = 0; i < count; i++)
+			cout << dir[i].name << endl;
 
-	Motion(dir, count);
-
-	delete[]dir;
+		int move = Motion(dir, count);
+		
+		delete[]dir;
+				
+		if (move == 0 || move == 1)
+		{
+			char *result = strrchr(path, '\\');
+			if (result)
+			{
+				for (int i = 0; i < 2; i++)
+				{
+				result = strrchr(path, '\\');
+				int delta = result - path;
+				strncpy_s(temp, delta + 1, path, delta);
+				temp[delta] = '\0';
+				strcpy_s(path, temp);
+				}
+				strcat_s(path, "\\*.*");
+			}
+						
+		}
+				
+		system("cls");
+	} while (1>0);
 }
