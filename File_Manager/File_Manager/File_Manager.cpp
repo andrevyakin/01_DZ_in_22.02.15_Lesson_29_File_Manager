@@ -1,17 +1,10 @@
-//Что нужно сделать (план действий для себя)
-//1. Записать содержимое текущей директории в массив или, лучше, в структуру (Имя, тип). 
-//2. Сдеать чтобы данные из массива выводились в консоль, например по 20 строк не больше, и реализовать движение курсора по этим строкам с помощью стрелок
-//3. При нажатии Enter - если директория - повторить п. 2, а если файл - вывести атрибуты.
-//4. Сделать выбор диска при нажатии клавиши, напимер F2, для чего узнать какие диски есть на компе.
-
 #undef UNICODE			//Отключает UNICODE, заданный по умолчанию в настройках VS
 						//это нужно для корректной работы функции GetCurrentDirectory
 #include <iostream>
-#include <iomanip>		//для setw() и setfill()
 #include <Windows.h>	//для корректного получения и вывода русского языка (SetConsoleOutputCP() и SetConsoleCP()), а также изменения цвета в консоле
 #include <io.h>			//для поиска файлов
 #include <conio.h>		//для _getch()
-#include <ctime>
+#include <ctime>		//для ctime_s
 using namespace std;
 
 //Получить количество элементов в директории
@@ -83,7 +76,7 @@ int Motion(_finddata_t* dir, int count)
 	_finddata_t* temp = new _finddata_t[count];
 	for (int i = 0; i < count; i++)
 		strncpy_s(temp[i].name, 41, dir[i].name, 40);
-	
+
 	system("cls");
 	//Вывод в консоль
 	for (int i = 0; i < count; i++)
@@ -149,7 +142,7 @@ int Motion(_finddata_t* dir, int count)
 		if (move == F1)
 			y = -3;
 		if (move == F2)
-			y = -3;
+			y = -4;
 	}
 	SetConsoleCursorPosition(0, count);
 	delete[]temp;
@@ -157,7 +150,7 @@ int Motion(_finddata_t* dir, int count)
 }
 
 //Узнать имеющиеся в системе диски, в т.ч. логические и съемные
-void GetDisks(char* disk)
+int GetDisks(char* disk)
 {
 	int count = 0;
 
@@ -170,6 +163,56 @@ void GetDisks(char* disk)
 		//Побитовым сдвигом перехожу к следующему биту и побитово сравниваю с 1 
 
 		disk[count++] = char(65 + i); // Буква диска. Char 65 - это A, и т.д.
+
+	return count;
+}
+
+char ChangeDisk(char* disk, int countDisks)
+{
+	int y = 0, move = 0;
+	system("cls");
+	for (int i = 0; i < countDisks; i++)
+		cout << disk[i] << ":\\" << endl;
+	cout << endl;
+
+	SetConsoleCursorPosition(0, 0);
+	SetConsoleColorTextBackground(clWhite, clGreen);
+	cout << disk[0] << ":\\" << endl;
+
+	while (move != ENTER)
+	{
+		//считываю нажатые клавиши
+		move = _getch();
+		if (move == 0xe0 || !move)
+			move = _getch();
+
+		//исключаю все клавиши, кроме разрешенных
+		if (move != UP && move != DOWN && move != ENTER)
+			move = 0;
+
+		if (move)
+		{
+			SetConsoleCursorPosition(0, y);
+			SetConsoleColorTextBackground(clGray, clBlack);
+			//здесь был курсор
+			cout << disk[y] << ":\\";
+
+			if (move == UP && y > 0)
+				y--;
+			if (move == DOWN && y < countDisks - 1)
+				y++;
+
+			SetConsoleCursorPosition(0, y);
+			SetConsoleColorTextBackground(clWhite, clGreen);
+			//здесь курсор сейчас
+			cout << disk[y] << ":\\";
+
+			//и вернуться опять к серо-черному
+			SetConsoleColorTextBackground(clGray, clBlack);
+		}
+	}
+	return disk[y];
+
 }
 
 //Мануал :))
@@ -202,10 +245,10 @@ void main()
 
 	do
 	{
-		
+
 		if (move == -3)
 			Help();
-		
+
 		//Добавляю маску к пути
 		strcat_s(path, "\\*.*");
 
@@ -214,16 +257,27 @@ void main()
 
 		//Создать массив элементов структуры _finddata_t для хранения данных текущей дирректории
 		_finddata_t* dir = new _finddata_t[count];
-		
+
 		//Заполнить массив данными текущей директории
 		GetDir(dir, count, path);
-		
+
 		//Передаю управление юзеру и узнаю что он хочет
 		move = Motion(dir, count);
-				
+
+		//Возврат по BackSpace
 		if (move == -2)
 			strcpy_s(path, temp);
-						
+
+		//Сменить диск
+		if (move == -4)
+		{
+			int countDisks = GetDisks(disk);
+			path[0] = ChangeDisk(disk, countDisks);
+			path[1] = ':';
+			path[2] = '\0';
+			strcat_s(path, "\\*.*");
+		}
+
 		strcpy_s(temp, path);
 
 		//убрать маску (4-ре последних символа)
@@ -261,16 +315,16 @@ void main()
 			cout << endl;
 			cout << "RDO | HID | SYS | ARC |           DATE           | SIZE" << endl;
 			cout << "--- + --- + --- + --- +--------------------------+ ----" << endl;
-				
-					char buffer[30];
-					cout << ((dir[move].attrib & _A_RDONLY) ? " Y  " : " N  ") << "|";
-					cout << " " << ((dir[move].attrib & _A_HIDDEN) ? " Y  " : " N  ") << "|";
-					cout << " " << ((dir[move].attrib & _A_SYSTEM) ? " Y  " : " N  ") << "|";
-					cout << " " << ((dir[move].attrib & _A_ARCH) ? " Y  " : " N  ") << "|";
-					ctime_s(buffer, _countof(buffer), & dir[move].time_write);
-					strncpy_s(buffer, 25, buffer, 24);
-					cout << " " << buffer << " | " << dir[move].size << endl << endl;
-					system("pause");
+
+			char buffer[30];
+			cout << ((dir[move].attrib & _A_RDONLY) ? " Y  " : " N  ") << "|";
+			cout << " " << ((dir[move].attrib & _A_HIDDEN) ? " Y  " : " N  ") << "|";
+			cout << " " << ((dir[move].attrib & _A_SYSTEM) ? " Y  " : " N  ") << "|";
+			cout << " " << ((dir[move].attrib & _A_ARCH) ? " Y  " : " N  ") << "|";
+			ctime_s(buffer, _countof(buffer), &dir[move].time_write);
+			strncpy_s(buffer, 25, buffer, 24);
+			cout << " " << buffer << " | " << dir[move].size << endl << endl;
+			system("pause");
 		}
 
 		delete[]dir;
