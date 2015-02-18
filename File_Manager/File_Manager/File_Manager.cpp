@@ -104,7 +104,7 @@ int Motion(_finddata_t* dir, int count)
 	SetConsoleCursorPosition(50, 0);
 	cout << info;
 
-	while (move != ENTER && move != ESC && move != BackSpase)
+	while (move != ENTER && move != ESC && move != BackSpase && move != F1 && move != F2)
 	{
 		//считываю нажатые клавиши
 		move = _getch();
@@ -112,7 +112,7 @@ int Motion(_finddata_t* dir, int count)
 			move = _getch();
 
 		//исключаю все клавиши, кроме разрешенных
-		if (move != UP && move != DOWN && move != ENTER && move != ESC && move != BackSpase)
+		if (move != UP && move != DOWN && move != ENTER && move != ESC && move != BackSpase && move != F1 && move != F2)
 			move = 0;
 
 		if (move)
@@ -142,30 +142,70 @@ int Motion(_finddata_t* dir, int count)
 			SetConsoleColorTextBackground(clGray, clBlack);
 		}
 
-		if (move == BackSpase)
-			y = -2;
-		
 		if (move == ESC)
 			y = -1;
+		if (move == BackSpase)
+			y = -2;
+		if (move == F1)
+			y = -3;
+		if (move == F2)
+			y = -3;
 	}
 	SetConsoleCursorPosition(0, count);
 	delete[]temp;
 	return y;
 }
 
+//Узнать имеющиеся в системе диски, в т.ч. логические и съемные
+void GetDisks(char* disk)
+{
+	int count = 0;
+
+	for (int i = 0; i < 26; i++)
+	if ((GetLogicalDrives() >> i) & 1)
+
+		//Возвращаемое GetLogicalDrives() значение является коллекцией однобитных флагов, определяющих найденные диски.
+		//1 - есть диск. 0 - нет диска.
+		//Нулевой бит (самый младший) соответствует диску A:, первый бит - диску B:, второй - диску C: и т.д.
+		//Побитовым сдвигом перехожу к следующему биту и побитово сравниваю с 1 
+
+		disk[count++] = char(65 + i); // Буква диска. Char 65 - это A, и т.д.
+}
+
+//Мануал :))
+void Help()
+{
+	system("cls");
+	cout << "\n\tДвижение по катологу осуществляется стрелками вверх и вниз." << endl;
+	cout << "\n\tВыбор - Enter." << endl;
+	cout << "\n\tBackSpace - возврат в предыдущий каталог." << endl;
+	cout << "\n\tF1 - вызов этой справки." << endl;
+	SetConsoleColorTextBackground(clCyan, clBlack);
+	cout << "\n\tF2 - сменить диск." << endl;
+	SetConsoleColorTextBackground(clGray, clBlack);
+	cout << "\n\tEsc - выход из программы.\n" << endl;
+	system("pause");
+}
+
 void main()
 {
 	SetConsoleOutputCP(1251);
 	SetConsoleCP(1251);
-	int move = 0;
+	int move = -3;
 	char path[MAX_PATH];
 	char temp[MAX_PATH];
+
+	char disk[26]; //Массив для хранения информации о дисках компа. 26 букв в английском алфавите. Винда больше не предлагает для буквы диска.
 
 	GetCurrentDirectory(sizeof(path), path);
 	strcpy_s(temp, path);
 
 	do
 	{
+		
+		if (move == -3)
+			Help();
+		
 		//Добавляю маску к пути
 		strcat_s(path, "\\*.*");
 
@@ -216,7 +256,7 @@ void main()
 		}
 
 		//Если файл - вывести атрибуты
-		if (!(dir[move].attrib & _A_SUBDIR) && move != -1 && move != -2)
+		if (!(dir[move].attrib & _A_SUBDIR) && move > -1)
 		{
 			cout << endl;
 			cout << "RDO | HID | SYS | ARC |           DATE           | SIZE" << endl;
