@@ -16,6 +16,12 @@ int GetCount(char* path)
 	//Получить сведения о первом экземпляре
 	int firstID = _findfirst(path, &temp);
 
+	if (firstID == -1)
+	{
+		system("cls");
+		cout << "Носителя нет в устройстве" << endl;
+		return -1;
+	}
 	while (_findnext(firstID, &temp) != -1)
 		++count;
 	_findclose(firstID);
@@ -234,9 +240,16 @@ void main()
 {
 	SetConsoleOutputCP(1251);
 	SetConsoleCP(1251);
+
+	//Элемент меню
 	int move = -3;
+
+	//Путь
 	char path[MAX_PATH];
 	char temp[MAX_PATH];
+
+	//массив элементов структуры _finddata_t для хранения данных текущей дирректории
+	_finddata_t* dir = nullptr;
 
 	char disk[26]; //Массив для хранения информации о дисках компа. 26 букв в английском алфавите. Винда больше не предлагает для буквы диска.
 
@@ -245,7 +258,6 @@ void main()
 
 	do
 	{
-
 		if (move == -3)
 			Help();
 
@@ -255,14 +267,23 @@ void main()
 		//Узнать количество элементов в директории
 		int count = GetCount(path);
 
-		//Создать массив элементов структуры _finddata_t для хранения данных текущей дирректории
-		_finddata_t* dir = new _finddata_t[count];
+		//Если ошибка, связанная с отсутствием носителя
+		if (count == -1)
+		{
+			cout << "Выберите другой диск..." << endl;
+			move = -4;
+			system("pause");
+		}
+		else
+		{
+			dir = new _finddata_t[count];
 
-		//Заполнить массив данными текущей директории
-		GetDir(dir, count, path);
+			//Заполнить массив данными текущей директории
+			GetDir(dir, count, path);
 
-		//Передаю управление юзеру и узнаю что он хочет
-		move = Motion(dir, count);
+			//Передаю управление юзеру и узнаю что он хочет
+			move = Motion(dir, count);
+		}
 
 		//Возврат по BackSpace
 		if (move == -2)
@@ -280,7 +301,7 @@ void main()
 
 		strcpy_s(temp, path);
 
-		//убрать маску (4-ре последних символа)
+		//убрать маску
 		strncpy_s(path, strlen(path) - 3, path, strlen(path) - 4);
 
 		// Переход в родительский каталог
@@ -303,14 +324,14 @@ void main()
 		}
 
 		// Переход в выбранный каталог
-		if ((dir[move].attrib & _A_SUBDIR) && move > 1)
+		if (move > 1 && (dir[move].attrib & _A_SUBDIR))
 		{
 			strcat_s(path, "\\");
 			strcat_s(path, dir[move].name);
 		}
 
 		//Если файл - вывести атрибуты
-		if (!(dir[move].attrib & _A_SUBDIR) && move > -1)
+		if (move > -1 && !(dir[move].attrib & _A_SUBDIR))
 		{
 			cout << endl;
 			cout << "RDO | HID | SYS | ARC |           DATE           | SIZE" << endl;
@@ -326,7 +347,7 @@ void main()
 			cout << " " << buffer << " | " << dir[move].size << endl << endl;
 			system("pause");
 		}
-
+		dir = nullptr;
 		delete[]dir;
 	} while (move != -1);
 }
