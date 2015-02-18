@@ -7,6 +7,91 @@
 #include <ctime>		//для ctime_s
 using namespace std;
 
+class Stack
+{
+	// Нижняя и верхняя границы стека
+	enum { EMPTY = -1, FULL = 30 };
+
+	// Массив для хранения данных
+	char st[FULL + 1][MAX_PATH];
+
+	// Указатель на вершину стека
+	int top;
+
+public:
+	
+	// Конструктор
+	Stack();
+
+	// Добавление элемента
+	void Push(char* history);
+
+	// Извлечение элемента
+	char Pop(char* history);
+
+	// Очистка стека
+	void Clear();
+
+	// Проверка существования элементов в стеке
+	bool IsEmpty();
+
+	// Проверка на переполнение стека
+	bool IsFull();
+
+	// Количество элементов в стеке
+	int GetCount();
+};
+
+Stack::Stack()
+{
+	// Изначально стек пуст
+	top = EMPTY;
+}
+
+void Stack::Clear()
+{
+	top = EMPTY;
+}
+
+bool Stack::IsEmpty()
+{
+	// Пуст?
+	return top == EMPTY;
+}
+
+bool Stack::IsFull()
+{
+	// Полон?
+	return top == FULL;
+}
+
+int Stack::GetCount()
+{
+	// Количество присутствующих в стеке элементов
+	return top + 1;
+}
+
+void Stack::Push(char* history)
+{
+	// Если в стеке есть место, то увеличиваем указатель
+	// на вершину стека и вставляем новый элемент
+	if (!IsFull())
+		strcpy_s(st[++top], history);
+}
+
+char Stack::Pop(char* history)
+{
+	// Если в стеке есть элементы, то возвращаем верхний и
+	// уменьшаем указатель на вершину стека
+	if (!IsEmpty())
+	{
+		strcpy_s(history, MAX_PATH, st[top--]);
+		return 1;
+	}
+	else // Если в стеке элементов нет
+		return 0;
+}
+
 //Получить количество элементов в директории
 int GetCount(char* path)
 {
@@ -257,7 +342,6 @@ char ChangeDisk(char* disk, int countDisks)
 		}
 	}
 	return disk[y];
-
 }
 
 //Мануал :))
@@ -286,7 +370,8 @@ void main()
 
 	//Путь
 	char path[MAX_PATH];
-	char temp[MAX_PATH];
+	char history[MAX_PATH];
+	Stack ST;
 
 	//массив элементов структуры _finddata_t для хранения данных текущей дирректории
 	_finddata_t* dir = nullptr;
@@ -294,7 +379,14 @@ void main()
 	char disk[26]; //Массив для хранения информации о дисках компа. 26 букв в английском алфавите. Винда больше не предлагает для буквы диска.
 
 	GetCurrentDirectory(sizeof(path), path);
-	strcpy_s(temp, path);
+
+	//Добавляю маску к пути
+	strcat_s(path, "\\*.*");
+	strcpy_s(history, path);
+	//Сохранить историю в стек
+	ST.Push(history);
+	//убрать маску
+	strncpy_s(path, strlen(path) - 3, path, strlen(path) - 4);
 
 	do
 	{
@@ -333,7 +425,11 @@ void main()
 
 		//Возврат по BackSpace
 		if (move == -2)
-			strcpy_s(path, temp);
+		{
+			char temp = ST.Pop(history);
+
+			temp != 0 ? strcpy_s(path, history) : temp;
+		}
 
 		//Сменить диск
 		if (move == -4)
@@ -345,7 +441,11 @@ void main()
 			strcat_s(path, "\\*.*");
 		}
 
-		strcpy_s(temp, path);
+		if (move != -2)
+		{
+			strcpy_s(history, path);
+			ST.Push(history);
+		}
 
 		//убрать маску
 		strncpy_s(path, strlen(path) - 3, path, strlen(path) - 4);
