@@ -1,5 +1,5 @@
 #undef UNICODE			//Отключает UNICODE, заданный по умолчанию в настройках VS
-						//это нужно для корректной работы функции GetCurrentDirectory
+						//это нужно для корректной работы функции GetCurrentDirectory с char
 #include <iostream>
 #include <Windows.h>	//для корректного получения и вывода русского языка (SetConsoleOutputCP() и SetConsoleCP()), а также изменения цвета в консоле
 #include <io.h>			//для поиска файлов
@@ -75,7 +75,7 @@ enum VKey
 //Движение стрелками и выдод директории в консоль
 int Motion(_finddata_t* dir, int count, char* path)
 {
-	int y = 0, move = 0;
+	int y = 0, move = 0, block = 0;
 	char info[MAX_PATH];
 
 	//Нужно укоротить имена файлов до 40 символов, чтобы не ломали картину
@@ -83,67 +83,97 @@ int Motion(_finddata_t* dir, int count, char* path)
 	for (int i = 0; i < count; i++)
 		strncpy_s(temp[i].name, 41, dir[i].name, 40);
 
-	system("cls");
 	//Вывод в консоль
-	for (int i = 0; i < count; i++)
+	do
 	{
-		// Проверяем Директория или Нет
-		dir[i].attrib&_A_SUBDIR ? strcpy_s(info, "Каталог") : strcpy_s(info, "Файл");
-		SetConsoleCursorPosition(0, y + i);
-		cout << temp[i].name;
-		SetConsoleCursorPosition(50, y + i);
-		cout << info;
-	}
+		if (move != ESC && move != BackSpase && move != F1 && move != F2 && move != ENTER)
+			system("cls");
 
-	SetConsoleColorTextBackground(clLime, clBlack);
-	SetConsoleCursorPosition(0, count + 1);
-	cout << path;
+		move = y = 0;
 
-	SetConsoleCursorPosition(0, 0);
-	SetConsoleColorTextBackground(clWhite, clGreen);
-	//Подсвечиваю самую верхнюю позицию
-	dir[0].attrib&_A_SUBDIR ? strcpy_s(info, "Каталог") : strcpy_s(info, "Файл");
-	cout << temp[0].name;
-	SetConsoleCursorPosition(50, 0);
-	cout << info;
-
-	while (move != ENTER && move != ESC && move != BackSpase && move != F1 && move != F2)
-	{
-		//считываю нажатые клавиши
-		move = _getch();
-		if (move == 0xe0 || !move)
-			move = _getch();
-
-		//исключаю все клавиши, кроме разрешенных
-		if (move != UP && move != DOWN && move != ENTER && move != ESC && move != BackSpase && move != F1 && move != F2)
-			move = 0;
-
-		if (move)
+		for (int i = block; i < count; i++)
 		{
-			SetConsoleCursorPosition(0, y);
-			SetConsoleColorTextBackground(clGray, clBlack);
-			//здесь был курсор
-			dir[y].attrib&_A_SUBDIR ? strcpy_s(info, "Каталог") : strcpy_s(info, "Файл");
-			cout << temp[y].name;
-			SetConsoleCursorPosition(50, y);
+			// Проверяем Директория или Нет
+			dir[i].attrib&_A_SUBDIR ? strcpy_s(info, "Каталог") : strcpy_s(info, "Файл");
+
+			SetConsoleCursorPosition(0, y + i - block);
+			cout << temp[i].name;
+			SetConsoleCursorPosition(50, y + i - block);
 			cout << info;
 
-			if (move == UP && y > 0)
-				y--;
-			if (move == DOWN && y < count - 1)
-				y++;
-
-			SetConsoleCursorPosition(0, y);
-			SetConsoleColorTextBackground(clWhite, clGreen);
-			//здесь курсор сейчас
-			dir[y].attrib&_A_SUBDIR ? strcpy_s(info, "Каталог") : strcpy_s(info, "Файл");
-			cout << temp[y].name;
-			SetConsoleCursorPosition(50, y);
-			cout << info;
-
-			//и вернуться опять к серо-черному
-			SetConsoleColorTextBackground(clGray, clBlack);
+			if (i == 19 + block)
+				break;
 		}
+
+		SetConsoleColorTextBackground(clLime, clBlack);
+		SetConsoleCursorPosition(0, (count < 20) ? (count - block + 1) : 22);
+		cout << path;
+
+		if ((count - block) > 20)
+		{
+			SetConsoleCursorPosition(25, 23);
+			cout << "PageDown";
+		}
+
+		if (block >= 20)
+		{
+			SetConsoleCursorPosition(43, 23);
+			cout << "PageUp";
+		}
+
+		SetConsoleCursorPosition(0, 0);
+		SetConsoleColorTextBackground(clWhite, clGreen);
+		//Подсвечиваю самую верхнюю позицию
+		dir[block].attrib&_A_SUBDIR ? strcpy_s(info, "Каталог") : strcpy_s(info, "Файл");
+		cout << temp[block].name;
+		SetConsoleCursorPosition(50, 0);
+		cout << info;
+
+		while (move != ENTER && move != ESC && move != BackSpase && move != F1 && move != F2 && move != PageDown && move != PageUp)
+		{
+			//считываю нажатые клавиши
+			move = _getch();
+			if (move == 0xe0 || 0)
+				move = _getch();
+
+			//исключаю все клавиши, кроме разрешенных
+			if (move != UP && move != DOWN && move != ENTER && move != ESC && move != BackSpase && move != F1 && move != F2 && move != PageDown && move != PageUp)
+				move = 0;
+
+			//движение стрелками
+			if (move)
+			{
+				SetConsoleCursorPosition(0, y);
+				SetConsoleColorTextBackground(clGray, clBlack);
+				//здесь был курсор
+				dir[y + block].attrib&_A_SUBDIR ? strcpy_s(info, "Каталог") : strcpy_s(info, "Файл");
+				cout << temp[y + block].name;
+				SetConsoleCursorPosition(50, y);
+				cout << info;
+
+				if (move == UP && y > 0)
+					y--;
+				if (move == DOWN && y + block < count - 1 && y < 19)
+					y++;
+
+				SetConsoleCursorPosition(0, y);
+				SetConsoleColorTextBackground(clWhite, clGreen);
+				//здесь курсор сейчас
+				dir[y + block].attrib&_A_SUBDIR ? strcpy_s(info, "Каталог") : strcpy_s(info, "Файл");
+				cout << temp[y + block].name;
+				SetConsoleCursorPosition(50, y);
+				cout << info;
+
+				//и вернуться опять к серо-черному
+				SetConsoleColorTextBackground(clGray, clBlack);
+			}
+		}
+
+		if (move == PageDown && (count - block) > 20)
+			block += 20;
+
+		if (move == PageUp && block >= 20)
+			block -= 20;
 
 		if (move == ESC)
 			y = -1;
@@ -153,10 +183,15 @@ int Motion(_finddata_t* dir, int count, char* path)
 			y = -3;
 		if (move == F2)
 			y = -4;
-	}
-	SetConsoleCursorPosition(0, count + 3);
+
+	} while (move != ESC && move != BackSpase && move != F1 && move != F2 && move != ENTER);
+
+	SetConsoleCursorPosition(0, count - block + 3);
 	delete[]temp;
-	return y;
+
+	if (move == ESC || move == BackSpase || move == F1 || move == F2)
+		return y;
+	return y + block;
 }
 
 //Узнать имеющиеся в системе диски, в т.ч. логические и съемные
@@ -233,6 +268,7 @@ void Help()
 	cout << "\n\tВыбор - Enter." << endl;
 	cout << "\n\tBackSpace - возврат в предыдущий каталог." << endl;
 	cout << "\n\tF1 - вызов этой справки." << endl;
+	cout << "\n\tPageDown и PageUp переход на следующую, или предыдущую страницы." << endl;
 	SetConsoleColorTextBackground(clCyan, clBlack);
 	cout << "\n\tF2 - сменить диск." << endl;
 	SetConsoleColorTextBackground(clGray, clBlack);
@@ -360,4 +396,5 @@ void main()
 		dir = nullptr;
 		delete[]dir;
 	} while (move != -1);
+	system("cls");
 }
