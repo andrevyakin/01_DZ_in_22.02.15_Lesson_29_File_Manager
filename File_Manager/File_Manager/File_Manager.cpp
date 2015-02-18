@@ -143,7 +143,7 @@ int Motion(_finddata_t* dir, int count)
 		}
 
 		if (move == BackSpase)
-			y = 1;
+			y = -2;
 		
 		if (move == ESC)
 			y = -1;
@@ -159,8 +159,10 @@ void main()
 	SetConsoleCP(1251);
 	int move = 0;
 	char path[MAX_PATH];
-	
+	char temp[MAX_PATH];
+
 	GetCurrentDirectory(sizeof(path), path);
+	strcpy_s(temp, path);
 
 	do
 	{
@@ -179,6 +181,11 @@ void main()
 		//Передаю управление юзеру и узнаю что он хочет
 		move = Motion(dir, count);
 				
+		if (move == -2)
+			strcpy_s(path, temp);
+						
+		strcpy_s(temp, path);
+
 		//убрать маску (4-ре последних символа)
 		strncpy_s(path, strlen(path) - 3, path, strlen(path) - 4);
 
@@ -194,17 +201,22 @@ void main()
 				//Убрать лишние символы
 				strncpy_s(path, delta + 1, path, delta);
 			}
+			else //Родительского каталога нет. Заходим в тот на котором курсор.
+			{
+				strcat_s(path, "\\");
+				strcat_s(path, dir[move].name);
+			}
 		}
 
 		// Переход в выбранный каталог
-		if ((dir[move].attrib & _A_SUBDIR) && move != - 1 && move > 1)
+		if ((dir[move].attrib & _A_SUBDIR) && move > 1)
 		{
 			strcat_s(path, "\\");
 			strcat_s(path, dir[move].name);
 		}
 
 		//Если файл - вывести атрибуты
-		if (!(dir[move].attrib & _A_SUBDIR) && move != -1)
+		if (!(dir[move].attrib & _A_SUBDIR) && move != -1 && move != -2)
 		{
 			cout << endl;
 			cout << "RDO | HID | SYS | ARC |           DATE           | SIZE" << endl;
