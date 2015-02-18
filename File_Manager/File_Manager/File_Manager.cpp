@@ -73,20 +73,36 @@ enum VKey
 	F1 = 59, F2 = 60, PageUp = 73, PageDown = 81
 };
 
-//Движение стрелками
+//Движение стрелками и выдод директории в консоль
 int Motion(_finddata_t* dir, int count)
 {
 	int y = 0, move = 0;
+	char info[MAX_PATH];
+
+	//Нужно укоротить имена файлов до 40 символов, чтобы не ломали картину
+	_finddata_t* temp = new _finddata_t[count];
+	for (int i = 0; i < count; i++)
+		strncpy_s(temp[i].name, 41, dir[i].name, 40);
 	
 	system("cls");
 	//Вывод в консоль
 	for (int i = 0; i < count; i++)
-		cout << dir[i].name << endl;
+	{
+		// Проверяем Директория или Нет
+		dir[i].attrib&_A_SUBDIR ? strcpy_s(info, "Каталог") : strcpy_s(info, "Файл");
+		SetConsoleCursorPosition(0, y + i);
+		cout << temp[i].name;
+		SetConsoleCursorPosition(50, y + i);
+		cout << info;
+	}
 
 	SetConsoleCursorPosition(0, 0);
 	SetConsoleColorTextBackground(clWhite, clGreen);
 	//Подсвечиваю самую верхнюю позицию
-	cout << dir[0].name;
+	dir[0].attrib&_A_SUBDIR ? strcpy_s(info, "Каталог") : strcpy_s(info, "Файл");
+	cout << temp[0].name;
+	SetConsoleCursorPosition(50, 0);
+	cout << info;
 
 	while (move != ENTER && move != ESC && move != BackSpase)
 	{
@@ -104,7 +120,10 @@ int Motion(_finddata_t* dir, int count)
 			SetConsoleCursorPosition(0, y);
 			SetConsoleColorTextBackground(clGray, clBlack);
 			//здесь был курсор
-			cout << dir[y].name;
+			dir[y].attrib&_A_SUBDIR ? strcpy_s(info, "Каталог") : strcpy_s(info, "Файл");
+			cout << temp[y].name;
+			SetConsoleCursorPosition(50, y);
+			cout << info;
 
 			if (move == UP && y > 0)
 				y--;
@@ -114,17 +133,23 @@ int Motion(_finddata_t* dir, int count)
 			SetConsoleCursorPosition(0, y);
 			SetConsoleColorTextBackground(clWhite, clGreen);
 			//здесь курсор сейчас
-			cout << dir[y].name;
+			dir[y].attrib&_A_SUBDIR ? strcpy_s(info, "Каталог") : strcpy_s(info, "Файл");
+			cout << temp[y].name;
+			SetConsoleCursorPosition(50, y);
+			cout << info;
 
 			//и вернуться опять к серо-черному
 			SetConsoleColorTextBackground(clGray, clBlack);
 		}
 
+		if (move == BackSpase)
+			y = 1;
+		
 		if (move == ESC)
 			y = -1;
-
 	}
 	SetConsoleCursorPosition(0, count);
+	delete[]temp;
 	return y;
 }
 
@@ -153,7 +178,7 @@ void main()
 		
 		//Передаю управление юзеру и узнаю что он хочет
 		move = Motion(dir, count);
-
+				
 		//убрать маску (4-ре последних символа)
 		strncpy_s(path, strlen(path) - 3, path, strlen(path) - 4);
 
