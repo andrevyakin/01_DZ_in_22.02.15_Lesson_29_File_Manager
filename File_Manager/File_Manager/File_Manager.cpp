@@ -73,7 +73,7 @@ enum VKey
 };
 
 //Движение стрелками и выдод директории в консоль
-int Motion(_finddata_t* dir, int count)
+int Motion(_finddata_t* dir, int count, char* path)
 {
 	int y = 0, move = 0;
 	char info[MAX_PATH];
@@ -94,6 +94,10 @@ int Motion(_finddata_t* dir, int count)
 		SetConsoleCursorPosition(50, y + i);
 		cout << info;
 	}
+
+	SetConsoleColorTextBackground(clLime, clBlack);
+	SetConsoleCursorPosition(0, count + 1);
+	cout << path;
 
 	SetConsoleCursorPosition(0, 0);
 	SetConsoleColorTextBackground(clWhite, clGreen);
@@ -150,7 +154,7 @@ int Motion(_finddata_t* dir, int count)
 		if (move == F2)
 			y = -4;
 	}
-	SetConsoleCursorPosition(0, count);
+	SetConsoleCursorPosition(0, count + 3);
 	delete[]temp;
 	return y;
 }
@@ -281,8 +285,14 @@ void main()
 			//Заполнить массив данными текущей директории
 			GetDir(dir, count, path);
 
+			//убрать маску
+			strncpy_s(path, strlen(path) - 3, path, strlen(path) - 4);
+
 			//Передаю управление юзеру и узнаю что он хочет
-			move = Motion(dir, count);
+			move = Motion(dir, count, path);
+
+			//Добавить маску к пути
+			strcat_s(path, "\\*.*");
 		}
 
 		//Возврат по BackSpace
