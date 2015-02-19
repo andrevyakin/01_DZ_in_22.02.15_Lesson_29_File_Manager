@@ -7,90 +7,71 @@
 #include <ctime>		//для ctime_s
 using namespace std;
 
-class Stack
+//Для храниея истории в списке, типа динамического стека.
+struct Elem
 {
-	// Нижняя и верхняя границы стека
-	enum { EMPTY = -1, FULL = 30 };
-
-	// Массив для хранения данных
-	char st[FULL + 1][MAX_PATH];
-
-	// Указатель на вершину стека
-	int top;
-
-public:
-	
-	// Конструктор
-	Stack();
-
-	// Добавление элемента
-	void Push(char* history);
-
-	// Извлечение элемента
-	char Pop(char* history);
-
-	// Очистка стека
-	void Clear();
-
-	// Проверка существования элементов в стеке
-	bool IsEmpty();
-
-	// Проверка на переполнение стека
-	bool IsFull();
-
-	// Количество элементов в стеке
-	int GetCount();
+	char history[MAX_PATH];
+	Elem * next, *prev;
 };
 
-Stack::Stack()
+class List
 {
-	// Изначально стек пуст
-	top = EMPTY;
-}
+	Elem *Tail; //Голова не нужна. "Главное хвост!" (с).
+	int Count;
 
-void Stack::Clear()
-{
-	top = EMPTY;
-}
+public:
 
-bool Stack::IsEmpty()
-{
-	// Пуст?
-	return top == EMPTY;
-}
-
-bool Stack::IsFull()
-{
-	// Полон?
-	return top == FULL;
-}
-
-int Stack::GetCount()
-{
-	// Количество присутствующих в стеке элементов
-	return top + 1;
-}
-
-void Stack::Push(char* history)
-{
-	// Если в стеке есть место, то увеличиваем указатель
-	// на вершину стека и вставляем новый элемент
-	if (!IsFull())
-		strcpy_s(st[++top], history);
-}
-
-char Stack::Pop(char* history)
-{
-	// Если в стеке есть элементы, то возвращаем верхний и
-	// уменьшаем указатель на вершину стека
-	if (!IsEmpty())
+	List()
 	{
-		strcpy_s(history, MAX_PATH, st[top--]);
-		return 1;
+		Tail = NULL;
+		Count = 0;
 	}
-	else // Если в стеке элементов нет
-		return 0;
-}
+
+	//Деструктор удаляет, пока есть элемены.
+	~List()
+	{
+		while (Count)
+			Del();
+	}
+
+	//Добавляет элемент в хвост
+	void Push(char* history)
+	{
+		Elem * temp = new Elem;
+		strcpy_s(temp->history, MAX_PATH, history);
+		temp->prev = Tail;
+		if (!Count)
+			Tail = temp;
+		else
+		{
+			Tail->next = temp;
+			Tail = temp;
+		}
+		Count++;
+	}
+
+	//Получить последний элемент
+	Elem * Pop()
+	{
+		return Tail;
+	}
+
+	//Узнать количество элементов
+	int GetCount()
+	{
+		return Count;
+	}
+
+	//Удалить последний элемент
+	void List::Del()
+	{
+		Elem * Del = Tail;
+		Elem * PrevDel = Del->prev;
+		Tail = PrevDel;
+		delete Del;
+		Count--;
+	}
+};
 
 //Получить количество элементов в директории
 int GetCount(char* path)
@@ -104,7 +85,7 @@ int GetCount(char* path)
 	if (firstID == -1)
 	{
 		system("cls");
-		cout << "Носителя нет в устройстве" << endl;
+		cout << "\n\tНосителя нет в устройстве, иди другая ошибка доступа..." << endl;
 		return -1;
 	}
 	while (_findnext(firstID, &temp) != -1)
@@ -118,8 +99,8 @@ void GetDir(_finddata_t* dir, int count, char* path)
 {
 	//Получить и сохранить сведения о первом экземпляре
 	int firstID = _findfirst(path, &dir[0]);
-	// Поиск и сохранение в массив
 
+	// Поиск и сохранение в массив
 	for (int i = 1; i < count; i++)
 		_findnext(firstID, &dir[i]);
 	_findclose(firstID);
@@ -368,25 +349,20 @@ void main()
 	//Элемент меню
 	int move = -3;
 
-	//Путь
+	//Путь к директории
 	char path[MAX_PATH];
-	char history[MAX_PATH];
-	Stack ST;
 
 	//массив элементов структуры _finddata_t для хранения данных текущей дирректории
 	_finddata_t* dir = nullptr;
 
-	char disk[26]; //Массив для хранения информации о дисках компа. 26 букв в английском алфавите. Винда больше не предлагает для буквы диска.
+	//Список-стек для хранения истории
+	List ST;
 
+	//Массив для хранения информации о дисках компа. 26 букв в английском алфавите. Винда больше не предлагает для буквы диска.
+	char disk[26];
+
+	//Получпю путь к текущей директории
 	GetCurrentDirectory(sizeof(path), path);
-
-	//Добавляю маску к пути
-	strcat_s(path, "\\*.*");
-	strcpy_s(history, path);
-	//Сохранить историю в стек
-	ST.Push(history);
-	//убрать маску
-	strncpy_s(path, strlen(path) - 3, path, strlen(path) - 4);
 
 	do
 	{
@@ -402,7 +378,7 @@ void main()
 		//Если ошибка, связанная с отсутствием носителя
 		if (count == -1)
 		{
-			cout << "Выберите другой диск..." << endl;
+			cout << "\n\tВыберите другой диск...\n" << endl;
 			move = -4;
 			system("pause");
 		}
@@ -426,25 +402,22 @@ void main()
 		//Возврат по BackSpace
 		if (move == -2)
 		{
-			char temp = ST.Pop(history);
-
-			temp != 0 ? strcpy_s(path, history) : temp;
+			strcpy_s(path, MAX_PATH, ST.Pop()->history);
+			if (ST.GetCount() > 1)
+				ST.Del();
 		}
+
+		//Если не BackSpace и не ошибка - запоминаю историю
+		if (move != -2 && count != -1)
+			ST.Push(path);
 
 		//Сменить диск
 		if (move == -4)
 		{
 			int countDisks = GetDisks(disk);
 			path[0] = ChangeDisk(disk, countDisks);
-			path[1] = ':';
-			path[2] = '\0';
-			strcat_s(path, "\\*.*");
-		}
-
-		if (move != -2)
-		{
-			strcpy_s(history, path);
-			ST.Push(history);
+			path[1] = '\0';
+			strcat_s(path, ":\\*.*");
 		}
 
 		//убрать маску
