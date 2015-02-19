@@ -1,5 +1,5 @@
 #undef UNICODE			//Отключает UNICODE, заданный по умолчанию в настройках VS
-						//это нужно для корректной работы функции GetCurrentDirectory с char
+//это нужно для корректной работы функции GetCurrentDirectory с char
 #include <iostream>
 #include <Windows.h>	//для корректного получения и вывода русского языка (SetConsoleOutputCP() и SetConsoleCP()), а также изменения цвета в консоле
 #include <io.h>			//для поиска файлов
@@ -79,15 +79,11 @@ int GetCount(char* path)
 	int count = 1;
 	_finddata_t temp;
 
-	//Получить сведения о первом экземпляре
 	int firstID = _findfirst(path, &temp);
 
 	if (firstID == -1)
-	{
-		system("cls");
-		cout << "\n\tНосителя нет в устройстве, иди другая ошибка доступа..." << endl;
 		return -1;
-	}
+
 	while (_findnext(firstID, &temp) != -1)
 		++count;
 	_findclose(firstID);
@@ -149,12 +145,10 @@ int Motion(_finddata_t* dir, int count, char* path)
 	for (int i = 0; i < count; i++)
 		strncpy_s(temp[i].name, 41, dir[i].name, 40);
 
-	//Вывод в консоль
+	//Вывод в консоль/. Внешний цикл для вывода блоками по 20 элементов. Для PageUp, PageDown
 	do
 	{
-		if (move != ESC && move != BackSpase && move != F1 && move != F2 && move != ENTER)
-			system("cls");
-
+		system("cls");
 		move = y = 0;
 
 		for (int i = block; i < count; i++)
@@ -187,19 +181,20 @@ int Motion(_finddata_t* dir, int count, char* path)
 			cout << "PageUp";
 		}
 
+		//Подсвечиваю самую верхнюю позицию
 		SetConsoleCursorPosition(0, 0);
 		SetConsoleColorTextBackground(clWhite, clGreen);
-		//Подсвечиваю самую верхнюю позицию
 		dir[block].attrib&_A_SUBDIR ? strcpy_s(info, "Каталог") : strcpy_s(info, "Файл");
 		cout << temp[block].name;
 		SetConsoleCursorPosition(50, 0);
 		cout << info;
 
+		//Внутренний цикл для движения стрелками по списку
 		while (move != ENTER && move != ESC && move != BackSpase && move != F1 && move != F2 && move != PageDown && move != PageUp)
 		{
 			//считываю нажатые клавиши
 			move = _getch();
-			if (move == 0xe0 || 0)
+			if (move == 0xe0 || !move)
 				move = _getch();
 
 			//исключаю все клавиши, кроме разрешенных
@@ -209,9 +204,9 @@ int Motion(_finddata_t* dir, int count, char* path)
 			//движение стрелками
 			if (move)
 			{
+				//здесь был курсор
 				SetConsoleCursorPosition(0, y);
 				SetConsoleColorTextBackground(clGray, clBlack);
-				//здесь был курсор
 				dir[y + block].attrib&_A_SUBDIR ? strcpy_s(info, "Каталог") : strcpy_s(info, "Файл");
 				cout << temp[y + block].name;
 				SetConsoleCursorPosition(50, y);
@@ -222,22 +217,19 @@ int Motion(_finddata_t* dir, int count, char* path)
 				if (move == DOWN && y + block < count - 1 && y < 19)
 					y++;
 
+				//здесь курсор сейчас
 				SetConsoleCursorPosition(0, y);
 				SetConsoleColorTextBackground(clWhite, clGreen);
-				//здесь курсор сейчас
 				dir[y + block].attrib&_A_SUBDIR ? strcpy_s(info, "Каталог") : strcpy_s(info, "Файл");
 				cout << temp[y + block].name;
 				SetConsoleCursorPosition(50, y);
 				cout << info;
-
-				//и вернуться опять к серо-черному
 				SetConsoleColorTextBackground(clGray, clBlack);
 			}
 		}
 
 		if (move == PageDown && (count - block) > 20)
 			block += 20;
-
 		if (move == PageUp && block >= 20)
 			block -= 20;
 
@@ -252,7 +244,7 @@ int Motion(_finddata_t* dir, int count, char* path)
 
 	} while (move != ESC && move != BackSpase && move != F1 && move != F2 && move != ENTER);
 
-	SetConsoleCursorPosition(0, count - block + 3);
+	SetConsoleCursorPosition(0, (count < 20) ? (count - block + 3) : 24);
 	delete[]temp;
 
 	if (move == ESC || move == BackSpase || move == F1 || move == F2)
@@ -298,14 +290,21 @@ char ChangeDisk(char* disk, int countDisks)
 			move = _getch();
 
 		//исключаю все клавиши, кроме разрешенных
-		if (move != UP && move != DOWN && move != ENTER)
+		if (move != UP && move != DOWN && move != ENTER && move != ESC)
 			move = 0;
+
+		if (move == ESC)
+		{
+			SetConsoleColorTextBackground(clGray, clBlack);
+			SetConsoleCursorPosition(0, countDisks);
+			return '!';
+		}
 
 		if (move)
 		{
+			//здесь был курсор
 			SetConsoleCursorPosition(0, y);
 			SetConsoleColorTextBackground(clGray, clBlack);
-			//здесь был курсор
 			cout << disk[y] << ":\\";
 
 			if (move == UP && y > 0)
@@ -313,15 +312,14 @@ char ChangeDisk(char* disk, int countDisks)
 			if (move == DOWN && y < countDisks - 1)
 				y++;
 
+			//здесь курсор сейчас
 			SetConsoleCursorPosition(0, y);
 			SetConsoleColorTextBackground(clWhite, clGreen);
-			//здесь курсор сейчас
 			cout << disk[y] << ":\\";
-
-			//и вернуться опять к серо-черному
 			SetConsoleColorTextBackground(clGray, clBlack);
 		}
 	}
+	SetConsoleCursorPosition(0, countDisks);
 	return disk[y];
 }
 
@@ -378,6 +376,7 @@ void main()
 		//Если ошибка, связанная с отсутствием носителя
 		if (count == -1)
 		{
+			cout << "\n\tНосителя нет в устройстве, иди другая ошибка доступа..." << endl;
 			cout << "\n\tВыберите другой диск...\n" << endl;
 			move = -4;
 			system("pause");
@@ -408,23 +407,29 @@ void main()
 		}
 
 		//Если не BackSpace и не ошибка - запоминаю историю
-		if (move != -2 && count != -1)
+		if (move != -2 && count != -1 && move != -3)
 			ST.Push(path);
 
 		//Сменить диск
 		if (move == -4)
 		{
 			int countDisks = GetDisks(disk);
-			path[0] = ChangeDisk(disk, countDisks);
-			path[1] = '\0';
-			strcat_s(path, ":\\*.*");
+			char temp = ChangeDisk(disk, countDisks);
+			if (temp != '!')
+			{
+				path[0] = temp;
+				path[1] = '\0';
+				strcat_s(path, ":\\*.*");
+			}
+			else
+				move = -1;
 		}
 
 		//убрать маску
 		strncpy_s(path, strlen(path) - 3, path, strlen(path) - 4);
 
 		// Переход в родительский каталог
-		if (move == 0 || move == 1)
+		if (move == 0 && (dir[move].attrib & _A_SUBDIR) || move == 1 && (dir[move].attrib & _A_SUBDIR))
 		{
 			//Найти адрес последнего слэша
 			char *end = strrchr(path, '\\');
@@ -452,22 +457,20 @@ void main()
 		//Если файл - вывести атрибуты
 		if (move > -1 && !(dir[move].attrib & _A_SUBDIR))
 		{
-			cout << endl;
+			char buffer[30];
+			ctime_s(buffer, _countof(buffer), &dir[move].time_write);
+			strncpy_s(buffer, 25, buffer, 24);
+			cout << dir[move].name << endl << endl;
 			cout << "RDO | HID | SYS | ARC |           DATE           | SIZE" << endl;
 			cout << "--- + --- + --- + --- +--------------------------+ ----" << endl;
-
-			char buffer[30];
 			cout << ((dir[move].attrib & _A_RDONLY) ? " Y  " : " N  ") << "|";
 			cout << " " << ((dir[move].attrib & _A_HIDDEN) ? " Y  " : " N  ") << "|";
 			cout << " " << ((dir[move].attrib & _A_SYSTEM) ? " Y  " : " N  ") << "|";
 			cout << " " << ((dir[move].attrib & _A_ARCH) ? " Y  " : " N  ") << "|";
-			ctime_s(buffer, _countof(buffer), &dir[move].time_write);
-			strncpy_s(buffer, 25, buffer, 24);
 			cout << " " << buffer << " | " << dir[move].size << endl << endl;
 			system("pause");
 		}
 		dir = nullptr;
 		delete[]dir;
 	} while (move != -1);
-	system("cls");
 }
